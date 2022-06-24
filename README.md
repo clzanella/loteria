@@ -2,7 +2,7 @@
 
 ## O que é
 
-Gera números para loteria consultando os jogos da Mega sena.
+Gera números para loteria consultando os consursos anteriores da Mega sena.
 
 ## Compilar
 
