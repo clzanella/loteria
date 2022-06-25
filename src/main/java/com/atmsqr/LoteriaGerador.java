@@ -7,10 +7,58 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class LoteriaGerador {
 
+    // Quina
     public static void main(String[] args) {
+
+        System.out.println("Carregando histórico de sorteios...");
+        List<Concurso> concursos = carregarDoCsv("historico/quina_asloterias_ate_concurso_5880_sorteio.xlsx - quina_www.asloterias.com.br.csv", null);
+
+        System.out.println("Calculando ranking dos números...");
+
+        List<Integer> numeros = IntStream.rangeClosed(1, 80).boxed().collect(Collectors.toList());
+
+        Map<Integer, Integer> rankingNumeros = new HashMap<>();
+
+        for(int num : numeros){
+            rankingNumeros.put(num, 0);
+        }
+
+        int oddCount = 0;
+        int evenCount = 0;
+
+        for(Concurso conc : concursos){
+            for(int num : conc.dezenas){
+                int count = rankingNumeros.get(num) + 1;
+                rankingNumeros.put(num, count);
+
+                if ( (num & 1) == 0 ) {
+                    // par
+                    evenCount++;
+                } else {
+                    // impar
+                    oddCount++;
+                }
+            }
+        }
+
+        List<Map.Entry<Integer, Integer>> list = rankingNumeros.entrySet().stream().collect(Collectors.toList());
+        list = list.stream().sorted((o1, o2) -> o2.getValue() - o1.getValue()).collect(Collectors.toList());
+
+        for(Map.Entry<Integer, Integer> entry : list){
+            System.out.println(entry.getKey() + " - sorteios: " + entry.getValue());
+        }
+
+        System.out.println();
+        System.out.println("Contagem de pares: " + evenCount + " Contagem de impares: " + oddCount);
+
+    }
+
+    // Megasena
+    public static void main2(String[] args) {
 
         System.out.println("Carregando histórico de sorteios...");
         ExecutorService executorService = Executors.newFixedThreadPool(10);
@@ -26,10 +74,9 @@ public class LoteriaGerador {
         int numJogos = teclado.nextInt();
         System.out.println("Quantas dezenas? (padrão 6 dezenas)");
         int dezenas = teclado.nextInt();
-        List<Integer> numeros = new ArrayList<>();
-        for (int i = 1; i <= 60; i++){
-            numeros.add(i);
-        }
+
+        List<Integer> numeros = IntStream.rangeClosed(1, 60).boxed().collect(Collectors.toList());
+
         for (int i = 1; i <= numJogos; i++) {
             List<Integer> jogo = new ArrayList<>();
             Collections.shuffle(numeros);
@@ -90,13 +137,20 @@ public class LoteriaGerador {
                         Integer.parseInt(segments[3]),
                         Integer.parseInt(segments[4]),
                         Integer.parseInt(segments[5]),
-                        Integer.parseInt(segments[6]),
-                        Integer.parseInt(segments[7])
+                        Integer.parseInt(segments[6])
                 );
+
+                if(concurso.dezenas.size() > 7){
+                    concurso.dezenas.add(Integer.parseInt(segments[7]));
+                }
+
                 Collections.sort(concurso.dezenas); // para facilitar a comparação
 
                 concursos.add(concurso);
-                tasks.add(CompletableFuture.runAsync(new ConcursoProcessamento(concurso), executorService));
+
+                if(executorService != null){
+                    tasks.add(CompletableFuture.runAsync(new ConcursoProcessamento(concurso), executorService));
+                }
             }
 
         }catch (IOException e) {
